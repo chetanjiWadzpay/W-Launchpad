@@ -1,0 +1,28 @@
+{
+  "name": "w-launchpad",
+  "version": "1.0.0",
+  "description": "W Launchpad on W-Chain",
+  "main": "index.js",
+  "scripts": {
+    "compile": "npx hardhat compile",
+    "deploy": "npx hardhat run scripts/deployAll.js --network wchain",
+    "create-launch": "npx hardhat run scripts/createLaunch.js --network wchain",
+    "buy": "npx hardhat run scripts/buy.js --network wchain",
+    "sell": "npx hardhat run scripts/sell.js --network wchain"
+  },
+  "keywords": [
+    "WChain",
+    "Launchpad",
+    "WCO",
+    "Hardhat"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "@nomicfoundation/hardhat-ethers": "^3.0.0",
+    "@openzeppelin/contracts": "^5.0.0",
+    "dotenv": "^16.4.0",
+    "ethers": "^6.10.0",
+    "hardhat": "^2.22.0"
+  }
+}

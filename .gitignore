@@ -1,0 +1,25 @@
+# dependencies
+node_modules/
+
+# hardhat
+artifacts/
+cache/
+
+# environment variables
+.env
+
+# logs
+logs/
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# vscode optional
+.vscode/
+
+# foundry (if any remains)
+out/
+broadcast/
+lib/
