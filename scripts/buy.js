@@ -1,22 +1,19 @@
-require("dotenv").config({ path: "./.env", override: true });
+require("dotenv").config();
 
 const hre = require("hardhat");
-const fs = require("fs");
 
-const DEPLOY_FILE = "./deployments/wchain.json";
+const selectLaunch =
+  require("../utils/selectLaunch");
 
 async function main() {
 
-  const deployments =
-    JSON.parse(fs.readFileSync(DEPLOY_FILE));
-
-  const curveAddress =
-    deployments.curve;
+  const launch =
+    await selectLaunch();
 
   const curve =
     await hre.ethers.getContractAt(
       "BondingCurve",
-      curveAddress
+      launch.curve
     );
 
   const amount = 100;
@@ -25,8 +22,14 @@ async function main() {
     await curve.getBuyCost(amount);
 
   console.log(
+    "\nBuying from:",
+    launch.name
+  );
+
+  console.log(
     "Cost:",
-    hre.ethers.formatEther(cost)
+    hre.ethers.formatEther(cost),
+    "WCO"
   );
 
   const tx =

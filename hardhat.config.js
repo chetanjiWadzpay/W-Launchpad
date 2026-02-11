@@ -1,4 +1,5 @@
 require("@nomicfoundation/hardhat-ethers");
+require("@nomicfoundation/hardhat-verify");
 
 require("dotenv").config({
   path: "./.env",
@@ -26,6 +27,36 @@ module.exports = {
       gasPrice: 1800000000000
 
     }
+
+  },
+
+  etherscan: {
+
+    apiKey: {
+
+      wchain: "dummy"
+
+    },
+
+    customChains: [
+
+      {
+        network: "wchain",
+        chainId: 171717,
+
+        urls: {
+
+          apiURL:
+            "https://scan.w-chain.com/api",
+
+          browserURL:
+            "https://scan.w-chain.com"
+
+        }
+
+      }
+
+    ]
 
   }
 

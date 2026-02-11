@@ -1,34 +1,79 @@
-require("dotenv").config({ path: "./.env", override: true });
+require("dotenv").config();
 
 const hre = require("hardhat");
+
 const fs = require("fs");
 
-const DEPLOY_FILE = "./deployments/wchain.json";
+const readline =
+  require("readline");
+
+const loadDeployments =
+  require("../utils/loadDeployments");
+
+const saveDeployments =
+  require("../utils/saveDeployments");
+
+const LAUNCH_FILE =
+  "./deployments/launches.json";
+
+function ask(question) {
+
+  const rl =
+    readline.createInterface({
+      input: process.stdin,
+      output: process.stdout
+    });
+
+  return new Promise(resolve =>
+    rl.question(
+      question,
+      answer => {
+        rl.close();
+        resolve(answer);
+      }
+    )
+  );
+
+}
 
 async function main() {
 
-  if (!fs.existsSync(DEPLOY_FILE)) {
-    throw new Error("Deployments file not found. Run deploy first.");
-  }
-
-  const deployments =
-    JSON.parse(fs.readFileSync(DEPLOY_FILE));
-
-  const factoryAddress =
-    deployments.factory;
+  const db =
+    loadDeployments();
 
   const factory =
     await hre.ethers.getContractAt(
       "WLaunchpadFactory",
-      factoryAddress
+      db.factory
     );
 
-  console.log("Creating new launch...");
+  const name =
+    await ask("Token Name: ");
+
+  const symbol =
+    await ask("Token Symbol: ");
+
+  const description =
+    await ask("Description (optional): ");
+
+  const image =
+    await ask("Image URL (optional): ");
+
+  const twitter =
+    await ask("Twitter URL (optional): ");
+
+  const telegram =
+    await ask("Telegram URL (optional): ");
+
+  const website =
+    await ask("Website URL (optional): ");
+
+  console.log("\nCreating launch...");
 
   const tx =
     await factory.createLaunch(
-      "MyToken",
-      "MTK"
+      name,
+      symbol
     );
 
   const receipt =
@@ -48,27 +93,71 @@ async function main() {
       const parsed =
         iface.parseLog(log);
 
-      token = parsed.args.token;
-      curve = parsed.args.curve;
-      creator = parsed.args.creator;
+      token =
+        parsed.args.token;
 
-    } catch {}
+      curve =
+        parsed.args.curve;
+
+      creator =
+        parsed.args.creator;
+
+    }
+    catch {}
 
   }
 
-  console.log("Token:", token);
-  console.log("Curve:", curve);
+  db.token = token;
+  db.curve = curve;
+  db.creator = creator;
 
-  deployments.token = token;
-  deployments.curve = curve;
-  deployments.creator = creator;
+  saveDeployments(db);
+
+  let launches = [];
+
+  if (fs.existsSync(LAUNCH_FILE)) {
+
+    launches =
+      JSON.parse(
+        fs.readFileSync(LAUNCH_FILE)
+      );
+
+  }
+
+  launches.push({
+
+    token,
+    curve,
+    creator,
+
+    name,
+    symbol,
+
+    description,
+    image,
+
+    twitter,
+    telegram,
+    website,
+
+    createdAt:
+      new Date().toISOString()
+
+  });
 
   fs.writeFileSync(
-    DEPLOY_FILE,
-    JSON.stringify(deployments, null, 2)
+    LAUNCH_FILE,
+    JSON.stringify(
+      launches,
+      null,
+      2
+    )
   );
 
-  console.log("Updated deployments file.");
+  console.log("\nLaunch Created Successfully");
+
+  console.log("Token:", token);
+  console.log("Curve:", curve);
 
 }
 
