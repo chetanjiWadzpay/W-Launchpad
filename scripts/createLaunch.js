@@ -1,11 +1,8 @@
 require("dotenv").config();
 
 const hre = require("hardhat");
-
 const fs = require("fs");
-
-const readline =
-  require("readline");
+const readline = require("readline");
 
 const loadDeployments =
   require("../utils/loadDeployments");
@@ -13,11 +10,17 @@ const loadDeployments =
 const saveDeployments =
   require("../utils/saveDeployments");
 
+const uploadMetadata =
+  require("../backend/ipfs/uploadMetadata");
+
 const LAUNCH_FILE =
   "./deployments/launches.json";
 
-function ask(question) {
+const TOKENS_FILE =
+  "./backend/storage/tokens.json";
 
+function ask(question)
+{
   const rl =
     readline.createInterface({
       input: process.stdin,
@@ -25,27 +28,33 @@ function ask(question) {
     });
 
   return new Promise(resolve =>
-    rl.question(
-      question,
-      answer => {
-        rl.close();
-        resolve(answer);
-      }
-    )
+    rl.question(question, answer =>
+    {
+      rl.close();
+      resolve(answer);
+    })
   );
-
 }
 
-async function main() {
-
+async function main()
+{
   const db =
     loadDeployments();
+
+  if(!db.factory)
+  {
+    throw new Error(
+      "Factory not deployed. Run deploy first."
+    );
+  }
 
   const factory =
     await hre.ethers.getContractAt(
       "WLaunchpadFactory",
       db.factory
     );
+
+  console.log("\n=== CREATE NEW TOKEN ===\n");
 
   const name =
     await ask("Token Name: ");
@@ -54,21 +63,42 @@ async function main() {
     await ask("Token Symbol: ");
 
   const description =
-    await ask("Description (optional): ");
+    await ask("Description: ");
 
   const image =
-    await ask("Image URL (optional): ");
+    await ask("Image URL: ");
 
   const twitter =
-    await ask("Twitter URL (optional): ");
+    await ask("Twitter URL: ");
 
   const telegram =
-    await ask("Telegram URL (optional): ");
+    await ask("Telegram URL: ");
 
   const website =
-    await ask("Website URL (optional): ");
+    await ask("Website URL: ");
 
-  console.log("\nCreating launch...");
+  console.log("\nUploading metadata to IPFS...");
+
+  const metadata =
+  {
+    name,
+    symbol,
+    description,
+    image,
+    twitter,
+    telegram,
+    website
+  };
+
+  const metadataURI =
+    await uploadMetadata(metadata);
+
+  console.log(
+    "Metadata uploaded:",
+    metadataURI
+  );
+
+  console.log("\nCreating launch on blockchain...");
 
   const tx =
     await factory.createLaunch(
@@ -86,10 +116,10 @@ async function main() {
 
   let token, curve, creator;
 
-  for (const log of receipt.logs) {
-
-    try {
-
+  for(const log of receipt.logs)
+  {
+    try
+    {
       const parsed =
         iface.parseLog(log);
 
@@ -101,11 +131,11 @@ async function main() {
 
       creator =
         parsed.args.creator;
-
     }
-    catch {}
-
+    catch{}
   }
+
+  /// Save deployments
 
   db.token = token;
   db.curve = curve;
@@ -113,37 +143,31 @@ async function main() {
 
   saveDeployments(db);
 
+  /// Save launches.json
+
   let launches = [];
 
-  if (fs.existsSync(LAUNCH_FILE)) {
-
+  if(fs.existsSync(LAUNCH_FILE))
+  {
     launches =
       JSON.parse(
         fs.readFileSync(LAUNCH_FILE)
       );
-
   }
 
-  launches.push({
-
+  const launchData =
+  {
     token,
     curve,
     creator,
-
     name,
     symbol,
-
-    description,
-    image,
-
-    twitter,
-    telegram,
-    website,
-
+    metadataURI,
     createdAt:
       new Date().toISOString()
+  };
 
-  });
+  launches.push(launchData);
 
   fs.writeFileSync(
     LAUNCH_FILE,
@@ -154,10 +178,35 @@ async function main() {
     )
   );
 
-  console.log("\nLaunch Created Successfully");
+  /// Save tokens.json (pump.fun style registry)
+
+  let tokens = [];
+
+  if(fs.existsSync(TOKENS_FILE))
+  {
+    tokens =
+      JSON.parse(
+        fs.readFileSync(TOKENS_FILE)
+      );
+  }
+
+  tokens.push(launchData);
+
+  fs.writeFileSync(
+    TOKENS_FILE,
+    JSON.stringify(
+      tokens,
+      null,
+      2
+    )
+  );
+
+  console.log("\n=== SUCCESS ===");
 
   console.log("Token:", token);
   console.log("Curve:", curve);
+  console.log("Creator:", creator);
+  console.log("Metadata:", metadataURI);
 
 }
 

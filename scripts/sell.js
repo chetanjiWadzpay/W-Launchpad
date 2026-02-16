@@ -1,19 +1,20 @@
 require("dotenv").config();
 
 const hre = require("hardhat");
-
+const fs = require("fs");
 const readline = require("readline");
 
-const selectLaunch =
-  require("../utils/selectLaunch");
+const updateVolume =
+  require("../backend/indexer/volumeTracker");
 
+const indexTrades =
+  require("../backend/indexer/indexTrades");
 
-// -------------------------
-// helper: ask user input
-// -------------------------
+const LAUNCH_FILE =
+  "./deployments/launches.json";
 
-function ask(question) {
-
+function ask(question)
+{
   const rl =
     readline.createInterface({
       input: process.stdin,
@@ -21,23 +22,27 @@ function ask(question) {
     });
 
   return new Promise(resolve =>
-    rl.question(
-      question,
-      answer => {
-        rl.close();
-        resolve(answer);
-      }
-    )
+    rl.question(question, answer =>
+    {
+      rl.close();
+      resolve(answer);
+    })
   );
-
 }
 
+async function main()
+{
+  if(!fs.existsSync(LAUNCH_FILE))
+  {
+    throw new Error(
+      "No launches found."
+    );
+  }
 
-// -------------------------
-// main
-// -------------------------
-
-async function main() {
+  const launches =
+    JSON.parse(
+      fs.readFileSync(LAUNCH_FILE)
+    );
 
   const [user] =
     await hre.ethers.getSigners();
@@ -47,17 +52,33 @@ async function main() {
     user.address
   );
 
+  console.log("\nAvailable launches:\n");
 
-  // select launch
+  launches.forEach((l, i) =>
+  {
+    console.log(
+      `${i+1}. ${l.name} (${l.symbol})`
+    );
+
+    console.log(
+      `   Token: ${l.token}`
+    );
+
+    console.log(
+      `   Curve: ${l.curve}\n`
+    );
+  });
+
+  const choice =
+    await ask("Select launch number: ");
+
   const launch =
-    await selectLaunch();
+    launches[choice - 1];
 
-  console.log(
-    "\nSelected Launch:",
-    launch.name,
-    `(${launch.symbol})`
-  );
-
+  if(!launch)
+  {
+    throw new Error("Invalid selection");
+  }
 
   const curve =
     await hre.ethers.getContractAt(
@@ -71,55 +92,28 @@ async function main() {
       launch.token
     );
 
-
-  // get balance
   const balance =
     await token.balanceOf(
       user.address
     );
 
   console.log(
-    "Your token balance:",
+    "\nYour token balance:",
     balance.toString()
   );
 
-  if (balance == 0) {
-
-    console.log(
-      "\nYou have no tokens to sell."
-    );
-
-    return;
-
-  }
-
-
-  // ask amount
-  const amountInput =
-    await ask(
-      "Amount to sell: "
-    );
-
   const amount =
-    Number(amountInput);
+    await ask("Amount to sell: ");
 
-
-  if (amount > balance) {
-
-    console.log(
-      "Insufficient balance"
+  if(Number(amount) > Number(balance))
+  {
+    throw new Error(
+      "Not enough tokens"
     );
-
-    return;
-
   }
 
-
-  // estimate reward
   const reward =
-    await curve.getSellReward(
-      amount
-    );
+    await curve.getSellReward(amount);
 
   console.log(
     "\nYou will receive:",
@@ -127,11 +121,7 @@ async function main() {
     "WCO"
   );
 
-
-  // approve
-  console.log(
-    "\nApproving token..."
-  );
+  console.log("\nApproving...");
 
   const approveTx =
     await token.approve(
@@ -141,60 +131,34 @@ async function main() {
 
   await approveTx.wait();
 
+  console.log("Selling...");
 
-  // sell
+  const tx =
+    await curve.sell(amount);
+
   console.log(
-    "Selling..."
+    "\nTx:",
+    tx.hash
   );
 
-  const sellTx =
-    await curve.sell(
-      amount
-    );
-
-  const receipt =
-    await sellTx.wait();
-
+  await tx.wait();
 
   console.log(
     "\nSELL SUCCESS"
   );
 
-  console.log(
-    "Tx:",
-    receipt.hash
+  /// update volume
+
+  await updateVolume(
+    launch.token,
+    reward.toString()
   );
 
+  /// index trades for THIS curve
 
-  // new balances
-  const newBalance =
-    await token.balanceOf(
-      user.address
-    );
-
-  const curveBalance =
-    await hre.ethers.provider.getBalance(
-      launch.curve
-    );
-
-  console.log(
-    "\n=== UPDATED STATE ==="
+  await indexTrades(
+    launch.curve
   );
-
-  console.log(
-    "Your token balance:",
-    newBalance.toString()
-  );
-
-  console.log(
-    "Curve liquidity:",
-    hre.ethers.formatEther(
-      curveBalance
-    ),
-    "WCO"
-  );
-
 }
-
 
 main().catch(console.error);

@@ -1,23 +1,20 @@
 [
   {
-    "token": "0xEb4bA3e4a1e965A0f16e7F8D2b90a820cB29aa6e",
-    "curve": "0x56BA2cbbf014E8d06a3f2a4d12Ce4850C4c19dAD",
+    "token": "0xd7aE44927365f621b955220fE1Ce939de9dC48DE",
+    "curve": "0x4b7247e1255416bCcE92FcDf0635cb3ca11da405",
     "creator": "0x68376917dc94A78790b95dFb7dF8Ae1aB8D0CF2d",
-    "name": "Token1770801503027",
-    "symbol": "T3027",
-    "createdAt": "2026-02-11T09:18:28.986Z"
+    "name": "Token1770958303487",
+    "symbol": "T3487",
+    "metadataURI": "ipfs://QmPySbzAVzGYD3KCzL8jfAwyjvYneuKaivHAG89AG2AM96",
+    "createdAt": "2026-02-13T04:51:52.325Z"
   },
   {
-    "token": "0xe32987f6eaeb362ea1D78836d655C50Ce230A30d",
-    "curve": "0x5f0d798434ff86163163D21C9453761a68E252f6",
+    "token": "0xb95174086C12f9085D2eE29d8e5f1142F4aed31b",
+    "curve": "0x81cE5a71d585eE9e330574F4b172d7732496FD8B",
     "creator": "0x68376917dc94A78790b95dFb7dF8Ae1aB8D0CF2d",
-    "name": "WADZPAY",
+    "name": "Wadzpay",
     "symbol": "WTI",
-    "description": "Meme Coin",
-    "image": "",
-    "twitter": "",
-    "telegram": "",
-    "website": "",
-    "createdAt": "2026-02-11T09:20:12.775Z"
+    "metadataURI": "ipfs://QmVpsbn4CScUWqvuit2bLecXTHaEcTL9u5wLXFKMEWAvfK",
+    "createdAt": "2026-02-13T04:54:18.941Z"
   }
 ]

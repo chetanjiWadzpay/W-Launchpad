@@ -1,9 +1,10 @@
 {
-  "feeManager": "0x5093e80C5fD42cE3BDe61771e6E2835Faa666b0B",
-  "factory": "0x4FFCb0CcBaB8d6c6939d15769EBBBfC7f8CA4487",
-  "token": "0xe32987f6eaeb362ea1D78836d655C50Ce230A30d",
-  "curve": "0x5f0d798434ff86163163D21C9453761a68E252f6",
+  "feeManager": "0x05eBe1d7c82a33D46c8f50140A3f6815ee6e04E8",
+  "factory": "0x4bc883eCD51d83105Aa304d25D498B62e9060f0C",
+  "startBlock": 15717935,
+  "token": "0xb95174086C12f9085D2eE29d8e5f1142F4aed31b",
+  "curve": "0x81cE5a71d585eE9e330574F4b172d7732496FD8B",
   "creator": "0x68376917dc94A78790b95dFb7dF8Ae1aB8D0CF2d",
-  "name": "Token1770801503027",
-  "symbol": "T3027"
+  "name": "Token1770958303487",
+  "symbol": "T3487"
 }

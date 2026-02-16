@@ -1,73 +1,24 @@
-require("dotenv").config({
-  path: "./.env",
-  override: true
-});
+require("dotenv").config();
 
 const hre = require("hardhat");
 const fs = require("fs");
 
-const DEPLOY_FILE = "./deployments/wchain.json";
-const LAUNCHES_FILE = "./deployments/launches.json";
+const saveDeployments =
+  require("../utils/saveDeployments");
 
+const loadDeployments =
+  require("../utils/loadDeployments");
 
-// -----------------------------
-// Helpers
-// -----------------------------
+const uploadMetadata =
+  require("../backend/ipfs/uploadMetadata");
 
-function loadDeployments() {
+const LAUNCH_FILE =
+  "./deployments/launches.json";
 
-  if (!fs.existsSync(DEPLOY_FILE))
-    return {};
-
-  return JSON.parse(
-    fs.readFileSync(DEPLOY_FILE)
-  );
-
-}
-
-function saveDeployments(data) {
-
-  fs.writeFileSync(
-    DEPLOY_FILE,
-    JSON.stringify(data, null, 2)
-  );
-
-}
-
-function loadLaunches() {
-
-  if (!fs.existsSync(LAUNCHES_FILE))
-    return [];
-
-  return JSON.parse(
-    fs.readFileSync(LAUNCHES_FILE)
-  );
-
-}
-
-function saveLaunch(launch) {
-
-  const launches =
-    loadLaunches();
-
-  launches.push(launch);
-
-  fs.writeFileSync(
-    LAUNCHES_FILE,
-    JSON.stringify(launches, null, 2)
-  );
-
-}
-
-
-// -----------------------------
-// Explorer verification helper
-// -----------------------------
-
-async function verify(address, args = []) {
-
-  try {
-
+async function verify(address, args = [])
+{
+  try
+  {
     await hre.run(
       "verify:verify",
       {
@@ -77,41 +28,15 @@ async function verify(address, args = []) {
     );
 
     console.log("Verified:", address);
-
   }
-
-  catch (e) {
-
-    if (
-      e.message.includes("Already Verified")
-    ) {
-
-      console.log(
-        "Already verified:",
-        address
-      );
-
-    }
-    else {
-
-      console.log(
-        "Verification failed:",
-        address
-      );
-
-    }
-
+  catch(e)
+  {
+    console.log("Verification failed:", address);
   }
-
 }
 
-
-// -----------------------------
-// Main Deploy Script
-// -----------------------------
-
-async function main() {
-
+async function main()
+{
   const [deployer] =
     await hre.ethers.getSigners();
 
@@ -120,19 +45,24 @@ async function main() {
     deployer.address
   );
 
-  let db =
-    loadDeployments();
+  let db = {};
 
+  try
+  {
+    db = loadDeployments();
+  }
+  catch
+  {
+    db = {};
+  }
 
-  // -----------------------------
-  // Deploy FeeManager
-  // -----------------------------
+  /// -------------------------
+  /// DEPLOY FEEMANAGER
+  /// -------------------------
 
-  if (!db.feeManager) {
-
-    console.log(
-      "\nDeploying FeeManager..."
-    );
+  if (!db.feeManager)
+  {
+    console.log("\nDeploying FeeManager...");
 
     const FeeManager =
       await hre.ethers.getContractFactory(
@@ -158,27 +88,22 @@ async function main() {
       db.feeManager,
       [deployer.address]
     );
-
   }
-  else {
-
+  else
+  {
     console.log(
-      "\nFeeManager already deployed:",
+      "\nFeeManager exists:",
       db.feeManager
     );
-
   }
 
+  /// -------------------------
+  /// DEPLOY FACTORY
+  /// -------------------------
 
-  // -----------------------------
-  // Deploy Factory
-  // -----------------------------
-
-  if (!db.factory) {
-
-    console.log(
-      "\nDeploying Factory..."
-    );
+  if (!db.factory)
+  {
+    console.log("\nDeploying Factory...");
 
     const Factory =
       await hre.ethers.getContractFactory(
@@ -204,25 +129,27 @@ async function main() {
       db.factory,
       [db.feeManager]
     );
-
   }
-  else {
-
+  else
+  {
     console.log(
-      "\nFactory already deployed:",
+      "\nFactory exists:",
       db.factory
     );
-
   }
 
+  /// -------------------------
+  /// SAVE START BLOCK
+  /// -------------------------
 
-  // -----------------------------
-  // Create Launch
-  // -----------------------------
+  db.startBlock =
+    await hre.ethers.provider.getBlockNumber();
 
-  console.log(
-    "\nCreating Launch..."
-  );
+  /// -------------------------
+  /// CREATE DEFAULT TOKEN
+  /// -------------------------
+
+  console.log("\nCreating Launch...");
 
   const factory =
     await hre.ethers.getContractAt(
@@ -230,25 +157,19 @@ async function main() {
       db.factory
     );
 
-  // auto generate unique token name
-  const timestamp =
-    Date.now();
-
   const name =
-    `Token${timestamp}`;
+    "Token" + Date.now();
 
   const symbol =
-    `T${timestamp.toString().slice(-4)}`;
+    "T" + Date.now().toString().slice(-4);
 
-  console.log(
-    "Name:",
-    name
-  );
+  const metadataURI =
+    await uploadMetadata({
+      name,
+      symbol
+    });
 
-  console.log(
-    "Symbol:",
-    symbol
-  );
+  /// FIX: tx properly declared
 
   const tx =
     await factory.createLaunch(
@@ -259,7 +180,6 @@ async function main() {
   const receipt =
     await tx.wait();
 
-
   const iface =
     new hre.ethers.Interface([
       "event LaunchCreated(address token,address curve,address creator)"
@@ -267,10 +187,10 @@ async function main() {
 
   let token, curve, creator;
 
-  for (const log of receipt.logs) {
-
-    try {
-
+  for (const log of receipt.logs)
+  {
+    try
+    {
       const parsed =
         iface.parseLog(log);
 
@@ -282,27 +202,9 @@ async function main() {
 
       creator =
         parsed.args.creator;
-
     }
     catch {}
-
   }
-
-
-  console.log(
-    "\nLaunch Created"
-  );
-
-  console.log(
-    "Token:",
-    token
-  );
-
-  console.log(
-    "Curve:",
-    curve
-  );
-
 
   db.token = token;
   db.curve = curve;
@@ -310,66 +212,50 @@ async function main() {
   db.name = name;
   db.symbol = symbol;
 
+  console.log("\nLaunch Created");
+
+  console.log("Token:", token);
+  console.log("Curve:", curve);
 
   saveDeployments(db);
 
+  /// -------------------------
+  /// SAVE LAUNCH FILE
+  /// -------------------------
 
-  saveLaunch({
+  let launches = [];
 
+  if (fs.existsSync(LAUNCH_FILE))
+  {
+    launches =
+      JSON.parse(
+        fs.readFileSync(LAUNCH_FILE)
+      );
+  }
+
+  launches.push({
     token,
     curve,
     creator,
     name,
     symbol,
-
+    metadataURI,
     createdAt:
       new Date().toISOString()
-
   });
 
-
-  // -----------------------------
-  // Verify Token
-  // -----------------------------
-
-  await verify(
-    token,
-    [
-      name,
-      symbol,
-      creator,
-      db.factory
-    ]
+  fs.writeFileSync(
+    LAUNCH_FILE,
+    JSON.stringify(
+      launches,
+      null,
+      2
+    )
   );
 
+  console.log("\nSaved deployment files");
 
-  // -----------------------------
-  // Verify Curve
-  // -----------------------------
-
-  await verify(
-    curve,
-    [
-      token,
-      creator,
-      db.feeManager
-    ]
-  );
-
-
-  console.log(
-    "\nSaved to deployments/wchain.json"
-  );
-
-  console.log(
-    "Saved to deployments/launches.json"
-  );
-
-  console.log(
-    "\nDEPLOY COMPLETE\n"
-  );
-
+  console.log("\nDEPLOY COMPLETE\n");
 }
-
 
 main().catch(console.error);
